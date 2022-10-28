@@ -18,7 +18,7 @@ enum CanalTypes {
   large
 }
 
-enum CanalDiretions {
+enum CanalDirections {
   northbound
   southbound
   nortbound_southbound
@@ -36,7 +36,7 @@ model Canals {
   size      CanalTypes     @default(small)
   length    Float          @default(0) @db.Double
   is_close  Boolean        @default(false)
-  direction CanalDiretions @default(nortbound_southbound)
+  direction CanalDirections @default(nortbound_southbound)
   ships     Ships[]
 }
 
