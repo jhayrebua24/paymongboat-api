@@ -12,16 +12,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum CanalTypes {
-  small
-  medium
-  large
+enum CanalWays {
+  one_way
+  two_way
 }
 
 enum CanalDirections {
   northbound
   southbound
-  nortbound_southbound
+  northbound_southbound
+}
+
+enum CanalTypes {
+  small
+  medium
+  large
 }
 
 enum ShipType {
@@ -30,20 +35,41 @@ enum ShipType {
   bulk_carriers
 }
 
-model Canals {
-  id        Int            @id @default(autoincrement())
-  name      String         @unique
-  size      CanalTypes     @default(small)
-  length    Float          @default(0) @db.Double
-  is_close  Boolean        @default(false)
-  direction CanalDirections @default(nortbound_southbound)
-  ships     Ships[]
+model canals {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  length       Float          @default(0) @db.Double
+  ways         CanalWays      @default(one_way)
+  canal_routes canal_routes[]
+  size_id      Int?
+  canal_size   canal_size?    @relation(fields: [size_id], references: [id])
 }
 
-model Ships {
-  id       Int      @id @default(autoincrement())
-  canal_id Int
-  name     String   @unique
-  type     ShipType @default(off_shore)
-  Canals   Canals?  @relation(fields: [canal_id], references: [id])
+model canal_routes {
+  id        Int             @id @default(autoincrement())
+  is_close  Boolean         @default(false)
+  direction CanalDirections @default(southbound)
+  ships     ships[]
+  canals    canals?         @relation(fields: [canals_id], references: [id])
+  canals_id Int?
+}
+
+model canal_size {
+  id     Int        @id @default(autoincrement())
+  name   CanalTypes @unique @default(small)
+  canals canals[]
+}
+
+model ships {
+  id             Int           @id @default(autoincrement())
+  canal_route_id Int
+  name           String        @unique
+  type           ShipType      @default(off_shore)
+  time_in        DateTime      @default(now())
+  time_out       DateTime
+  total_hrs      Float         @default(0) @db.Double
+  excess_fee     Float         @default(0) @db.Double
+  total_fee      Float         @default(0) @db.Double
+  total_amount   Float         @default(0) @db.Double
+  canal_routes   canal_routes? @relation(fields: [canal_route_id], references: [id])
 }

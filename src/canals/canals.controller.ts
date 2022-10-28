@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { CanalsService } from './canals.service';
 import { CreateCanalDto } from './dto/create-canal.dto';
+import { SuggestCanalDto } from './dto/suggest-canal.dto';
 import { UpdateCanalDto } from './dto/update-canal.dto';
 
 @Controller('canals')
@@ -33,5 +34,10 @@ export class CanalsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.canalsService.remove(+id);
+  }
+
+  @Post('/suggest-canal')
+  suggestCanal(@Body() suggestCanalDto: SuggestCanalDto) {
+    return this.canalsService.getAvailableCanal(suggestCanalDto);
   }
 }

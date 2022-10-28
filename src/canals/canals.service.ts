@@ -3,6 +3,15 @@ import { PrismaService } from 'src/prisma.service';
 import { IWhereCanal } from 'src/canals/canals.interface';
 import { CreateCanalDto } from './dto/create-canal.dto';
 import { UpdateCanalDto } from './dto/update-canal.dto';
+import { SuggestCanalDto } from './dto/suggest-canal.dto';
+import { shipTypes } from './canals.constants';
+import { CanalDirections, CanalTypes } from '@prisma/client';
+import {
+  transformCanalData,
+  transformCanalRoutes,
+  transformSuggestedCanalComputation,
+} from './canals.transform';
+import { shipRate, shipSpeed } from 'src/ships/ships.constants';
 
 @Injectable()
 export class CanalsService {
@@ -24,29 +33,70 @@ export class CanalsService {
     return Promise.resolve('');
   }
 
+  formatRoutes = (direction: any) => {
+    if (direction === 'northbound_southbound')
+      return [
+        {
+          direction: 'northbound',
+          is_close: false,
+        },
+        {
+          direction: 'southbound',
+          is_close: false,
+        },
+      ];
+
+    return [
+      {
+        direction,
+        is_close: false,
+      },
+    ];
+  };
+
   async create(createCanalDto: CreateCanalDto) {
     try {
       await this.checkIfCanalExist(createCanalDto.name);
+      const { direction, ...canalData } = createCanalDto;
       const canal = await this.prisma.canals.create({
-        data: createCanalDto,
+        data: {
+          ...canalData,
+          ways: direction !== 'northbound_southbound' ? 'one_way' : 'two_way',
+          canal_routes: {
+            createMany: {
+              data: this.formatRoutes(direction),
+            },
+          },
+        },
+        include: {
+          canal_routes: {},
+        },
       });
       return {
         data: canal,
         message: 'Canal successfully created',
       };
     } catch (e) {
-      return new HttpException(e, 400);
+      throw new HttpException(e, 400);
     }
   }
-
+  //
   async findAll() {
     try {
-      const canals = await this.prisma.canals.findMany();
+      const canals = await this.prisma.canal_routes.findMany({
+        include: {
+          canals: {
+            include: {
+              canal_size: {},
+            },
+          },
+        },
+      });
       return {
-        data: canals,
+        data: transformCanalRoutes(canals),
       };
     } catch (e) {
-      return new HttpException(e, 400);
+      throw new HttpException(e, 400);
     }
   }
 
@@ -64,7 +114,7 @@ export class CanalsService {
         message: 'Canal successfully updated',
       };
     } catch (e) {
-      return new HttpException(e, 400);
+      throw new HttpException(e, 400);
     }
   }
 
@@ -79,7 +129,61 @@ export class CanalsService {
         message: 'Canal successfully deleted',
       };
     } catch (e) {
-      return new HttpException(e, 400);
+      throw new HttpException(e, 400);
+    }
+  }
+
+  async getAvailableCanal(suggestCanalDto: SuggestCanalDto) {
+    try {
+      const shipTypeIndex = shipTypes.indexOf(suggestCanalDto.type);
+      const canalAvailable = await this.prisma.canal_routes.findFirstOrThrow({
+        orderBy: [
+          {
+            canals: {
+              size_id: 'asc',
+            },
+          },
+          {
+            canals: {
+              length: 'asc',
+            },
+          },
+        ],
+        where: {
+          is_close: false,
+          direction: suggestCanalDto.direction,
+          ships: {
+            every: {
+              time_out: {
+                lte: new Date(),
+              },
+            },
+          },
+          canals: {
+            size_id: {
+              gt: shipTypeIndex,
+            },
+          },
+        },
+        include: {
+          canals: {
+            include: {
+              canal_size: {},
+            },
+          },
+        },
+      });
+      const canal = transformCanalData(canalAvailable);
+
+      return {
+        canal,
+        rate: transformSuggestedCanalComputation(
+          canal.length,
+          suggestCanalDto.type,
+        ),
+      };
+    } catch (error) {
+      throw new HttpException('No Available Canal', 400);
     }
   }
 }
