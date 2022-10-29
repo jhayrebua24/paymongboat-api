@@ -5,17 +5,23 @@ import { CreateCanalDto } from './dto/create-canal.dto';
 import { UpdateCanalDto } from './dto/update-canal.dto';
 import { SuggestCanalDto } from './dto/suggest-canal.dto';
 import { shipTypes } from './canals.constants';
-import { CanalDirections, CanalTypes } from '@prisma/client';
 import {
   transformCanalData,
   transformCanalRoutes,
   transformSuggestedCanalComputation,
 } from './canals.transform';
-import { shipRate, shipSpeed } from 'src/ships/ships.constants';
 
 @Injectable()
 export class CanalsService {
   constructor(private prisma: PrismaService) {}
+
+  private canalIncludes = {
+    canals: {
+      include: {
+        canal_size: {},
+      },
+    },
+  };
 
   async checkIfCanalExist(name: string, id: number = null) {
     const where = {
@@ -84,13 +90,7 @@ export class CanalsService {
   async findAll() {
     try {
       const canals = await this.prisma.canal_routes.findMany({
-        include: {
-          canals: {
-            include: {
-              canal_size: {},
-            },
-          },
-        },
+        include: this.canalIncludes,
       });
       return {
         data: transformCanalRoutes(canals),
@@ -102,8 +102,7 @@ export class CanalsService {
 
   async update(id: number, updateCanalDto: UpdateCanalDto) {
     try {
-      await this.checkIfCanalExist(updateCanalDto.name, id);
-      const canal = await this.prisma.canals.update({
+      const canal = await this.prisma.canal_routes.update({
         where: {
           id,
         },
@@ -111,7 +110,7 @@ export class CanalsService {
       });
       return {
         data: canal,
-        message: 'Canal successfully updated',
+        message: 'Route successfully updated',
       };
     } catch (e) {
       throw new HttpException(e, 400);
@@ -120,9 +119,19 @@ export class CanalsService {
 
   async remove(id: number) {
     try {
-      await this.prisma.canals.delete({
+      const route = await this.prisma.canal_routes.findFirstOrThrow({
+        include: {
+          canals: {},
+          ships: {},
+        },
         where: {
           id,
+        },
+      });
+
+      await this.prisma.canals.delete({
+        where: {
+          id: route.canals.id,
         },
       });
       return {
@@ -133,7 +142,7 @@ export class CanalsService {
     }
   }
 
-  async getAvailableCanal(suggestCanalDto: SuggestCanalDto) {
+  async getShortestCanal(suggestCanalDto: SuggestCanalDto) {
     try {
       const shipTypeIndex = shipTypes.indexOf(suggestCanalDto.type);
       const canalAvailable = await this.prisma.canal_routes.findFirstOrThrow({
@@ -165,22 +174,26 @@ export class CanalsService {
             },
           },
         },
-        include: {
-          canals: {
-            include: {
-              canal_size: {},
-            },
-          },
-        },
+        include: this.canalIncludes,
       });
-      const canal = transformCanalData(canalAvailable);
+      return Promise.resolve(transformCanalData(canalAvailable));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async getAvailableCanal(suggestCanalDto: SuggestCanalDto) {
+    try {
+      const canal = await this.getShortestCanal(suggestCanalDto);
 
       return {
-        canal,
-        rate: transformSuggestedCanalComputation(
-          canal.length,
-          suggestCanalDto.type,
-        ),
+        data: {
+          canal,
+          rate: transformSuggestedCanalComputation(
+            canal.length,
+            suggestCanalDto.type,
+          ),
+        },
       };
     } catch (error) {
       throw new HttpException('No Available Canal', 400);

@@ -50,7 +50,7 @@ model canal_routes {
   is_close  Boolean         @default(false)
   direction CanalDirections @default(southbound)
   ships     ships[]
-  canals    canals?         @relation(fields: [canals_id], references: [id])
+  canals    canals?         @relation(fields: [canals_id], references: [id], onDelete: Cascade)
   canals_id Int?
 }
 
@@ -71,5 +71,5 @@ model ships {
   excess_fee     Float         @default(0) @db.Double
   total_fee      Float         @default(0) @db.Double
   total_amount   Float         @default(0) @db.Double
-  canal_routes   canal_routes? @relation(fields: [canal_route_id], references: [id])
+  canal_routes   canal_routes? @relation(fields: [canal_route_id], references: [id], onDelete: Cascade)
 }

@@ -7,10 +7,13 @@ import {
   Param,
   Delete,
 } from '@nestjs/common';
+import { ApiResponse, getSchemaPath } from '@nestjs/swagger';
 import { CanalsService } from './canals.service';
+import { ICanal } from './canals.interface';
 import { CreateCanalDto } from './dto/create-canal.dto';
 import { SuggestCanalDto } from './dto/suggest-canal.dto';
 import { UpdateCanalDto } from './dto/update-canal.dto';
+import { CanalDto } from './dto/canal-dto';
 
 @Controller('canals')
 export class CanalsController {
@@ -22,6 +25,11 @@ export class CanalsController {
   }
 
   @Get()
+  @ApiResponse({
+    status: 200,
+    isArray: true,
+    type: CanalDto,
+  })
   findAll() {
     return this.canalsService.findAll();
   }

@@ -8,3 +8,13 @@ export enum CanalTypes {
   medium,
   large,
 }
+
+export interface ICanal {
+  id: number;
+  name: string;
+  length: string;
+  ways: string;
+  direction: string;
+  is_close: boolean;
+  size: string;
+}

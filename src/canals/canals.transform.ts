@@ -9,6 +9,7 @@ export const transformCanalData = ({ id, is_close, direction, ...canal }) => ({
   direction,
   is_close,
   size: canal.canals.canal_size.name,
+  canal_id: canal.canals.id,
 });
 
 export const transformCanalRoutes = (canals = []) =>
@@ -17,20 +18,25 @@ export const transformCanalRoutes = (canals = []) =>
 export const transformSuggestedCanalComputation = (
   length: number,
   type: string,
+  formatDate = true,
 ) => {
   const speed = shipSpeed[type];
   const rate = shipRate[type];
-  const totalHrs = Math.ceil(length / speed);
-  const totalFee = 500 + rate * totalHrs;
-  const penalty = totalHrs > 12 ? (totalHrs - 12) * 10 : 0;
-  const totalAmount = penalty + totalFee;
+  const total_hrs = Math.ceil(length / speed);
+  const total_fee = 500 + rate * total_hrs;
+  const penalty = total_hrs > 12 ? (total_hrs - 12) * 10 : 0;
+  const total_amount = penalty + total_fee;
+
+  const outDate = addDays(new Date(), total_hrs);
 
   return {
-    timeIn: format(new Date(), 'MMM dd yyyy hh:ii:ss'),
-    timeOut: format(addDays(new Date(), totalHrs), 'MMM dd yyyy hh:ii:ss'),
-    totalHrs,
-    excessFee: penalty,
-    totalFee,
-    totalAmount,
+    time_in: formatDate
+      ? format(new Date(), 'MMM dd yyyy hh:ii:ss')
+      : new Date(),
+    time_out: formatDate ? format(outDate, 'MMM dd yyyy hh:ii:ss') : outDate,
+    total_hrs,
+    excess_fee: penalty,
+    total_fee,
+    total_amount,
   };
 };

@@ -1,4 +1,9 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateCanalDto } from './create-canal.dto';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsBoolean, IsNotEmpty } from 'class-validator';
 
-export class UpdateCanalDto extends PartialType(CreateCanalDto) {}
+export class UpdateCanalDto {
+  @IsNotEmpty()
+  @IsBoolean()
+  @ApiProperty()
+  is_close: boolean;
+}
